@@ -9,45 +9,52 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.ListIterator;
+import java.util.regex.Matcher;
 
 public class TextEditor extends JFrame {
+    ArrayList<String> matches = new ArrayList<>();
+    ArrayList<Integer> index = new ArrayList<>();
+    File file;
+    JPanel topPanel = new JPanel();
     JPanel mainPanel = new JPanel();
     JButton buttonLoad = new JButton("Open");
     JButton buttonSave = new JButton("Save");
-    JTextField fieldFileName = new JTextField("",5);
-    JTextArea TextArea = new JTextArea(5,4);
+    SearchRegex searchField = new SearchRegex("",5);
+    JTextArea textArea = new JTextArea(5,4);
     JMenuBar menuBar = new JMenuBar();
     JMenu menu = new JMenu("File");
     JMenuItem menuItemOpen = new JMenuItem("Open");
     JMenuItem menuItemSave = new JMenuItem("Save");
     JMenuItem menuItemExit = new JMenuItem("Exit");
-
-    JTextField SearchField = new JTextField("",5);
-    JButton startSearchButton = new JButton("Start Search");
-    JButton prevSearchButton = new JButton("Previous Match Search");
-    JButton nextSearchButton = new JButton("Next Match Search");
-    JCheckBox RegExCheckbox = new JCheckBox("Use checkbox");
-    JFileChooser FileChooser = new JFileChooser();
+    JButton startSearchButton = new JButton("Search");
+    JButton prevSearchButton = new JButton("<");
+    JButton nextSearchButton = new JButton(">");
+    JCheckBox RegExCheckbox = new JCheckBox("Regex");
+    JFileChooser fileChooser = new JFileChooser();
     JMenu searchMenu = new JMenu("Search");
     JMenuItem menuItemStartSearch = new JMenuItem("Start Search");
     JMenuItem menuItemPrevSearch = new JMenuItem("Previous Search");
     JMenuItem menuItemNextSearch = new JMenuItem("Next Search");
     JMenuItem menuItemUseRegex = new JMenuItem("Use Regex");
 
-
-
+    static String TITLE = "Text editor :)";
 
     public TextEditor() {
-        super("The first stage");
+        super(TITLE);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setSize(300, 300);
-        setContentPane(mainPanel);
-        JScrollPane scrollPane = new JScrollPane(TextArea);
+        setSize(600, 400);
+        add(fileChooser);
+        add(topPanel,BorderLayout.NORTH);
+        add(mainPanel,BorderLayout.CENTER);
+//        fileChooser.setVisible(false);
+        JScrollPane scrollPane = new JScrollPane(textArea);
+        topPanel.setLayout(new BoxLayout(topPanel,BoxLayout.X_AXIS));
+        mainPanel.setLayout(new BorderLayout());
 
-        TextArea.setName("TextArea");
-        SearchField.setName("SearchField");
-
-        fieldFileName.setName("FilenameField");
+        textArea.setName("TextArea");
+        searchField.setName("SearchField");
 
         buttonSave.setName("SaveButton");
         buttonLoad.setName("OpenButton");
@@ -55,7 +62,7 @@ public class TextEditor extends JFrame {
         prevSearchButton.setName("PreviousMatchButton");
         nextSearchButton.setName("NextMatchButton");
         RegExCheckbox.setName("UseRegExCheckbox");
-        FileChooser.setName("FileChooser");
+        fileChooser.setName("FileChooser");
         scrollPane.setName("ScrollPane");
         menu.setName("MenuFile");
         searchMenu.setName("MenuSearch");
@@ -73,9 +80,19 @@ public class TextEditor extends JFrame {
         menu.add(menuItemSave);
         menu.addSeparator();
         menu.add(menuItemExit);
-        mainPanel.add(fieldFileName);
-        mainPanel.add(buttonSave);
-        mainPanel.add(buttonLoad);
+        menuBar.add(searchMenu);
+        searchMenu.add(menuItemStartSearch);
+        searchMenu.add(menuItemPrevSearch);
+        searchMenu.add(menuItemNextSearch);
+        searchMenu.add(menuItemUseRegex);
+
+        topPanel.add(buttonLoad);
+        topPanel.add(buttonSave);
+        topPanel.add(searchField);
+        topPanel.add(startSearchButton);
+        topPanel.add(prevSearchButton);
+        topPanel.add(nextSearchButton);
+        topPanel.add(RegExCheckbox);
         mainPanel.add(scrollPane);
 
 
@@ -84,8 +101,11 @@ public class TextEditor extends JFrame {
         buttonLoad.addActionListener(actionEvent -> {
             openFile();
         });
-        buttonSave.addActionListener(actionEvent -> {
-            saveFile();
+        buttonSave.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                saveFile();
+            }
         });
         menuItemSave.addActionListener(actionEvent -> {
             saveFile();
@@ -100,22 +120,118 @@ public class TextEditor extends JFrame {
                 System.exit(0);
             }
         });
+        startSearchButton.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                Matcher matcher = searchField.getMatches(searchField.getText(),textArea.getText());
+                matches.clear();
+                index.clear();
+                while (matcher.find()){
+                    matches.add(matcher.group());
+                    index.add(matcher.start());
+                }
+                textArea.setCaretPosition(index.get(0)+matches.get(0).length());
+                textArea.select(index.get(0),index.get(0)+matches.get(0).length());
+                textArea.grabFocus();
+            }
+        });
+        nextSearchButton.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                ListIterator<Integer> iterator = index.listIterator();
+                int iterIndex=0;
+                if (iterator.hasNext()) {
+                    iterator.next();
+                     iterIndex = iterator.nextIndex();
+                }
+                textArea.setCaretPosition(index.get(iterIndex)+matches.get(iterIndex).length());
+                textArea.select(index.get(iterIndex),index.get(iterIndex)+matches.get(iterIndex).length());
+                textArea.grabFocus();
+            }
+        });
+        prevSearchButton.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                ListIterator<Integer> iterator = index.listIterator();
+                int iterIndex=0;
+                if (iterator.hasPrevious()) {
+                    iterator.previous();
+                    iterIndex = iterator.previousIndex();
+                }
+                textArea.setCaretPosition(index.get(iterIndex)+matches.get(iterIndex).length());
+                textArea.select(index.get(iterIndex),index.get(iterIndex)+matches.get(iterIndex).length());
+                textArea.grabFocus();
+            }
+        });
+        menuItemStartSearch.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                Matcher matcher = searchField.getMatches(searchField.getText(),textArea.getText());
+                matches.clear();
+                index.clear();
+                while (matcher.find()){
+                    matches.add(matcher.group());
+                    index.add(matcher.start());
+                }
+                textArea.setCaretPosition(index.get(0)+matches.get(0).length());
+                textArea.select(index.get(0),index.get(0)+matches.get(0).length());
+                textArea.grabFocus();
+            }
+        });
+        menuItemNextSearch.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                ListIterator<Integer> iterator = index.listIterator();
+                int iterIndex=0;
+                if (iterator.hasNext()) {
+                    iterator.next();
+                    iterIndex = iterator.nextIndex();
+                }
+                textArea.setCaretPosition(index.get(iterIndex)+matches.get(iterIndex).length());
+                textArea.select(index.get(iterIndex),index.get(iterIndex)+matches.get(iterIndex).length());
+                textArea.grabFocus();
+            }
+        });
+        menuItemPrevSearch.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                ListIterator<Integer> iterator = index.listIterator();
+                int iterIndex=0;
+                if (iterator.hasPrevious()) {
+                    iterator.previous();
+                    iterIndex = iterator.previousIndex();
+                }
+                textArea.setCaretPosition(index.get(iterIndex)+matches.get(iterIndex).length());
+                textArea.select(index.get(iterIndex),index.get(iterIndex)+matches.get(iterIndex).length());
+                textArea.grabFocus();
+            }
+        });
 
         setVisible(true);
     }
     public void openFile(){
-        try {
-            TextArea.setText(readFileAsString(fieldFileName.getText()));
-        } catch (IOException e) {
-            TextArea.setText("");
-            e.printStackTrace();
+        int ret = fileChooser.showOpenDialog(this);
+        if (ret==JFileChooser.APPROVE_OPTION) {
+            try {
+                file= fileChooser.getSelectedFile();
+                setTitle(TITLE+"  -  "+file.getName());
+                textArea.setText(readFileAsString(file.getAbsolutePath()));
+            } catch (IOException e) {
+                textArea.setText("");
+                e.printStackTrace();
+            }
         }
-        TextEditor.this.revalidate();
+            TextEditor.this.revalidate();
     }
     public void saveFile(){
-        writeFile(fieldFileName.getText(),TextArea.getText());
+        int ret = fileChooser.showSaveDialog(this);
+        if (ret==JFileChooser.APPROVE_OPTION) {
+            file= fileChooser.getSelectedFile();
+            setTitle(TITLE+"  -  "+file.getName());
+            writeFile(file.getAbsolutePath(), textArea.getText());
+        }
     }
-    public static String readFileAsString(String fileName) throws IOException, IOException {
+    public static String readFileAsString(String fileName) throws IOException {
         return new String(Files.readAllBytes(Paths.get(fileName)));
     }
     public static void writeFile(String fileName,String string) {
