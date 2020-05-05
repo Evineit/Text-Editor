@@ -2,6 +2,8 @@ package editor;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.File;
@@ -123,16 +125,37 @@ public class TextEditor extends JFrame {
         startSearchButton.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
-                Matcher matcher = searchField.getMatches(searchField.getText(),textArea.getText());
-                matches.clear();
-                index.clear();
-                while (matcher.find()){
-                    matches.add(matcher.group());
-                    index.add(matcher.start());
+            Thread search = new Thread(() -> {
+                {
+                    Matcher matcher = searchField.getMatches(searchField.getText(), textArea.getText());
+                    matches.clear();
+                    index.clear();
+                    if (RegExCheckbox.isSelected()){
+                        while (matcher.find()) {
+                            matches.add(matcher.group());
+                            index.add(matcher.start());
+                        }
+                    }else {
+                        while (matcher.find()&& matcher.group().equals(matcher.pattern().pattern())) {
+                            matches.add(matcher.group());
+                            index.add(matcher.start());
+                        }
+                    }
                 }
-                textArea.setCaretPosition(index.get(0)+matches.get(0).length());
-                textArea.select(index.get(0),index.get(0)+matches.get(0).length());
-                textArea.grabFocus();
+                if (index.listIterator().hasNext()){
+                    index.listIterator().next();
+                    textArea.setCaretPosition(index.get(0)+matches.get(0).length());
+                    textArea.select(index.get(0),index.get(0)+matches.get(0).length());
+                    textArea.grabFocus();
+
+                }
+            });
+            search.start();
+            try {
+                search.join();
+            } catch (InterruptedException interruptedException) {
+                interruptedException.printStackTrace();
+            }
             }
         });
         nextSearchButton.addMouseListener(new MouseAdapter() {
@@ -143,6 +166,11 @@ public class TextEditor extends JFrame {
                 if (iterator.hasNext()) {
                     iterator.next();
                      iterIndex = iterator.nextIndex();
+                }else {
+                    while (iterator.hasPrevious()){
+                        iterIndex=iterator.previousIndex();
+                        iterator.previous();
+                    }
                 }
                 textArea.setCaretPosition(index.get(iterIndex)+matches.get(iterIndex).length());
                 textArea.select(index.get(iterIndex),index.get(iterIndex)+matches.get(iterIndex).length());
@@ -157,60 +185,98 @@ public class TextEditor extends JFrame {
                 if (iterator.hasPrevious()) {
                     iterator.previous();
                     iterIndex = iterator.previousIndex();
+                }else {
+                    while (iterator.hasNext()){
+                        iterIndex=iterator.nextIndex();
+                        iterator.next();
+                    }
                 }
                 textArea.setCaretPosition(index.get(iterIndex)+matches.get(iterIndex).length());
                 textArea.select(index.get(iterIndex),index.get(iterIndex)+matches.get(iterIndex).length());
                 textArea.grabFocus();
+                System.out.println(textArea.getCaretPosition());
             }
         });
-        menuItemStartSearch.addMouseListener(new MouseAdapter() {
+        menuItemStartSearch.addActionListener(new ActionListener() {
             @Override
-            public void mouseClicked(MouseEvent e) {
-                Matcher matcher = searchField.getMatches(searchField.getText(),textArea.getText());
-                matches.clear();
-                index.clear();
-                while (matcher.find()){
-                    matches.add(matcher.group());
-                    index.add(matcher.start());
+            public void actionPerformed(ActionEvent actionEvent) {
+                Thread search = new Thread(() -> {
+                    {
+                        Matcher matcher = searchField.getMatches(searchField.getText(), textArea.getText());
+                        matches.clear();
+                        index.clear();
+                        if (RegExCheckbox.isSelected()){
+                            while (matcher.find()) {
+                                matches.add(matcher.group());
+                                index.add(matcher.start());
+                            }
+                        }else {
+                            while (matcher.find()&& matcher.group().equals(matcher.pattern().pattern())) {
+                                matches.add(matcher.group());
+                                index.add(matcher.start());
+                            }
+                        }
+                    }
+                    if (index.listIterator().hasNext()){
+                        index.listIterator().next();
+                        textArea.setCaretPosition(index.get(0)+matches.get(0).length());
+                        textArea.select(index.get(0),index.get(0)+matches.get(0).length());
+                        textArea.grabFocus();
+
+                    }
+                });
+                search.start();
+                try {
+                    search.join();
+                } catch (InterruptedException interruptedException) {
+                    interruptedException.printStackTrace();
                 }
-                textArea.setCaretPosition(index.get(0)+matches.get(0).length());
-                textArea.select(index.get(0),index.get(0)+matches.get(0).length());
-                textArea.grabFocus();
             }
         });
-        menuItemNextSearch.addMouseListener(new MouseAdapter() {
+        menuItemNextSearch.addActionListener(new ActionListener() {
             @Override
-            public void mouseClicked(MouseEvent e) {
+            public void actionPerformed(ActionEvent actionEvent) {
                 ListIterator<Integer> iterator = index.listIterator();
                 int iterIndex=0;
                 if (iterator.hasNext()) {
                     iterator.next();
                     iterIndex = iterator.nextIndex();
+                }else {
+                    while (iterator.hasPrevious()){
+                        iterIndex=iterator.previousIndex();
+                        iterator.previous();
+                    }
                 }
                 textArea.setCaretPosition(index.get(iterIndex)+matches.get(iterIndex).length());
                 textArea.select(index.get(iterIndex),index.get(iterIndex)+matches.get(iterIndex).length());
                 textArea.grabFocus();
             }
         });
-        menuItemPrevSearch.addMouseListener(new MouseAdapter() {
+        menuItemPrevSearch.addActionListener(new ActionListener() {
             @Override
-            public void mouseClicked(MouseEvent e) {
+            public void actionPerformed(ActionEvent actionEvent) {
                 ListIterator<Integer> iterator = index.listIterator();
                 int iterIndex=0;
                 if (iterator.hasPrevious()) {
                     iterator.previous();
                     iterIndex = iterator.previousIndex();
+                }else {
+                    while (iterator.hasNext()){
+                        iterIndex=iterator.nextIndex();
+                        iterator.next();
+                    }
                 }
                 textArea.setCaretPosition(index.get(iterIndex)+matches.get(iterIndex).length());
                 textArea.select(index.get(iterIndex),index.get(iterIndex)+matches.get(iterIndex).length());
                 textArea.grabFocus();
             }
         });
+        menuItemUseRegex.addActionListener(actionEvent -> RegExCheckbox.doClick());
 
         setVisible(true);
     }
     public void openFile(){
-        int ret = fileChooser.showOpenDialog(this);
+        int ret = fileChooser.showOpenDialog(null);
         if (ret==JFileChooser.APPROVE_OPTION) {
             try {
                 file= fileChooser.getSelectedFile();
@@ -224,7 +290,7 @@ public class TextEditor extends JFrame {
             TextEditor.this.revalidate();
     }
     public void saveFile(){
-        int ret = fileChooser.showSaveDialog(this);
+        int ret = fileChooser.showSaveDialog(null);
         if (ret==JFileChooser.APPROVE_OPTION) {
             file= fileChooser.getSelectedFile();
             setTitle(TITLE+"  -  "+file.getName());
